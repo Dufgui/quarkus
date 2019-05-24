@@ -38,6 +38,7 @@
         <module>jaxb</module>
         <module>jsonp</module>
         <module>jsonb</module>
+        <module>jackson</module>
 
         <!-- HTTP -->
         <module>undertow</module>

@@ -164,6 +164,15 @@
     "artifactId": "quarkus-jsonp"
   },
   {
+    "name": "JACKSON",
+    "labels": [
+      "jackson",
+      "jackson-databind"
+    ],
+    "groupId": "io.quarkus",
+    "artifactId": "quarkus-jackson"
+  },
+  {
     "name": "Keycloak",
     "labels": [
       "keycloak",
