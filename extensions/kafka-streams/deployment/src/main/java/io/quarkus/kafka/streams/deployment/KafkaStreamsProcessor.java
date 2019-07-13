@@ -1,6 +1,7 @@
 package io.quarkus.kafka.streams.deployment;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.kafka.common.serialization.Serdes.ByteArraySerde;
 import org.apache.kafka.streams.errors.DefaultProductionExceptionHandler;
@@ -10,6 +11,16 @@ import org.apache.kafka.streams.processor.FailOnInvalidTimestamp;
 import org.apache.kafka.streams.processor.internals.StreamsPartitionAssignor;
 import org.rocksdb.util.Environment;
 
+import com.google.protobuf.AbstractMessage;
+import com.google.protobuf.AbstractMessageLite;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.GeneratedMessageV3;
+import com.google.protobuf.Message;
+import com.google.protobuf.MessageLite;
+import com.google.protobuf.UnknownFieldSet;
+
+import io.quarkus.deployment.JniProcessor.JniConfig;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
@@ -20,9 +31,24 @@ import io.quarkus.deployment.builditem.substrate.RuntimeReinitializedClassBuildI
 import io.quarkus.deployment.builditem.substrate.SubstrateResourceBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.kafka.streams.runtime.KafkaStreamsRecorder;
+import io.quarkus.runtime.annotations.ConfigItem;
+import io.quarkus.runtime.annotations.ConfigPhase;
+import io.quarkus.runtime.annotations.ConfigRoot;
 
 class KafkaStreamsProcessor {
 
+    KafkaConfig kafka;
+
+    @ConfigRoot(phase = ConfigPhase.BUILD_TIME)
+    static class KafkaConfig {
+        
+        /**
+         * Enable Protocol Buffer support.
+         */
+        @ConfigItem(defaultValue = "false")
+        boolean enableProtoBuf = false;
+    }
+    
     @BuildStep
     @Record(ExecutionTime.STATIC_INIT)
     void build(RecorderContext recorder,
@@ -51,6 +77,33 @@ class KafkaStreamsProcessor {
 
         // re-initializing RocksDB to enable load of native libs
         reinitialized.produce(new RuntimeReinitializedClassBuildItem("org.rocksdb.RocksDB"));
+        
+        if(kafka.enableProtoBuf) {
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, AbstractMessage.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, AbstractMessage.Builder.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, AbstractMessageLite.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, AbstractMessageLite.Builder.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, ByteString.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, Descriptors.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, Descriptors.Descriptor.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, GeneratedMessageV3.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, GeneratedMessageV3.Builder.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, GeneratedMessageV3.FieldAccessorTable.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, Message.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, Message.Builder.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, MessageLite.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, MessageLite.Builder.class));
+            reflectiveClasses.produce(new ReflectiveClassBuildItem(true, false, false, UnknownFieldSet.class));
+            
+            /*
+            - com.google.protobuf.GeneratedMessageV3$FieldAccessorTable
+            - com.google.protobuf.Message
+            - com.google.protobuf.Message$Builder
+            - com.google.protobuf.MessageLite
+            - com.google.protobuf.MessageLite$Builder
+            - com.google.protobuf.UnknownFieldSet
+            */
+        }
     }
 
     @BuildStep

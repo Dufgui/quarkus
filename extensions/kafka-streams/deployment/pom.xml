@@ -12,6 +12,10 @@
 
     <artifactId>quarkus-kafka-streams-deployment</artifactId>
     <name>Quarkus - Kafka Streams - Deployment</name>
+    
+    <properties>
+    	<protobuf.version>3.8.0</protobuf.version>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -25,6 +29,19 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-kafka-streams</artifactId>
+        </dependency>
+        
+        <!-- Protocol Buffers -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.os72</groupId>
+            <artifactId>protoc-jar</artifactId>
+            <version>${protobuf.version}</version>
         </dependency>
 
         <!-- test dependencies -->
