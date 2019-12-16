@@ -9,6 +9,7 @@ import io.quarkus.runtime.annotations.ConfigItem;
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.quarkus.vertx.http.runtime.cors.CORSConfig;
+import io.quarkus.vertx.http.runtime.error.FailureConfig;
 
 @ConfigRoot(phase = ConfigPhase.RUN_TIME)
 public class HttpConfiguration {
@@ -53,6 +54,11 @@ public class HttpConfiguration {
      * The CORS config
      */
     public CORSConfig cors;
+    
+    /**
+     * The Failure config
+     */
+    public FailureConfig failure;
 
     /**
      * The SSL config

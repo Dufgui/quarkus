@@ -170,7 +170,7 @@ public class VertxHttpRecorder {
     }
 
     public void finalizeRouter(BeanContainer container, Consumer<Route> defaultRouteHandler,
-            List<Filter> filterList, RuntimeValue<Vertx> vertx,
+            List<Filter> filterList, Handler<RoutingContext> failureHandler, RuntimeValue<Vertx> vertx,
             RuntimeValue<Router> runtimeValue, String rootPath, LaunchMode launchMode, boolean requireBodyHandler,
             Handler<RoutingContext> bodyHandler) {
         // install the default route at the end
@@ -201,7 +201,7 @@ public class VertxHttpRecorder {
         }
 
         container.instance(RouterProducer.class).initialize(resumingRouter);
-        router.route().last().failureHandler(new QuarkusErrorHandler(launchMode.isDevOrTest()));
+        router.route().last().failureHandler(failureHandler);
 
         if (requireBodyHandler) {
             //if this is set then everything needs the body handler installed

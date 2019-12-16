@@ -34,6 +34,7 @@ import io.quarkus.vertx.http.runtime.HttpConfiguration;
 import io.quarkus.vertx.http.runtime.RouterProducer;
 import io.quarkus.vertx.http.runtime.VertxHttpRecorder;
 import io.quarkus.vertx.http.runtime.cors.CORSRecorder;
+import io.quarkus.vertx.http.runtime.error.ErrorRecorder;
 import io.quarkus.vertx.http.runtime.filters.Filter;
 import io.vertx.core.Handler;
 import io.vertx.core.impl.VertxImpl;
@@ -51,6 +52,12 @@ class VertxHttpProcessor {
     @Record(ExecutionTime.RUNTIME_INIT)
     FilterBuildItem cors(CORSRecorder recorder, HttpConfiguration configuration) {
         return new FilterBuildItem(recorder.corsHandler(configuration), FilterBuildItem.CORS);
+    }
+    
+    @BuildStep
+    @Record(ExecutionTime.RUNTIME_INIT)
+    FailureBuildItem errors(ErrorRecorder recorder, HttpConfiguration configuration, LaunchModeBuildItem launchMode) {
+        return new FailureBuildItem(recorder.errorHandler(configuration, launchMode.getLaunchMode()));
     }
 
     @BuildStep
@@ -111,7 +118,7 @@ class VertxHttpProcessor {
             VertxHttpRecorder recorder, BeanContainerBuildItem beanContainer,
             Optional<RequireVirtualHttpBuildItem> requireVirtual, InternalWebVertxBuildItem vertx,
             LaunchModeBuildItem launchMode, ShutdownContextBuildItem shutdown,
-            List<DefaultRouteBuildItem> defaultRoutes, List<FilterBuildItem> filters,
+            List<DefaultRouteBuildItem> defaultRoutes, List<FilterBuildItem> filters, FailureBuildItem failure,
             VertxWebRouterBuildItem router, EventLoopCountBuildItem eventLoopCount,
             HttpBuildTimeConfig httpBuildTimeConfig, HttpConfiguration httpConfiguration,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClass, List<WebsocketSubProtocolsBuildItem> websocketSubProtocols,
@@ -140,7 +147,7 @@ class VertxHttpProcessor {
 
         recorder.finalizeRouter(beanContainer.getValue(),
                 defaultRoute.map(DefaultRouteBuildItem::getRoute).orElse(null),
-                listOfFilters, vertx.getVertx(), router.getRouter(), httpBuildTimeConfig.rootPath, launchMode.getLaunchMode(),
+                listOfFilters, failure.getHandler(), vertx.getVertx(), router.getRouter(), httpBuildTimeConfig.rootPath, launchMode.getLaunchMode(),
                 !requireBodyHandlerBuildItems.isEmpty(), bodyHandler);
 
         boolean startVirtual = requireVirtual.isPresent() || httpBuildTimeConfig.virtual;
