@@ -5,20 +5,16 @@ import static org.jboss.logging.Logger.getLogger;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 import org.jboss.logging.Logger;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.quarkus.deployment.builditem.MethodDescription;
 import io.quarkus.runtime.TemplateHtmlBuilder;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
@@ -37,42 +33,17 @@ public class QuarkusErrorHandler implements Handler<RoutingContext> {
 
     private final boolean showStack;
     
-    private volatile static List<String> servletMappings = Collections.emptyList();
-    private volatile static List<String> staticResources = Collections.emptyList();
-    private volatile static List<String> additionalEndpoints = Collections.emptyList();
-    private volatile static List<ResourceDescription> descriptions = Collections.emptyList();
+    private final List<String> servletMappings;
+    private final List<String> staticResources;
+    private final List<String> additionalEndpoints;
+    private final List<ResourceDescription> descriptions;
     
-    public static final class MethodDescription {
-        public String verb;
-        public String path;
-        public String produces;
-        public String consumes;
-
-        public MethodDescription(String verb, String path, String produces, String consumes) {
-            super();
-            this.verb = verb;
-            this.path = path;
-            this.produces = produces;
-            this.consumes = consumes;
-        }
-    }
-    
-    public static final class ResourceDescription {
-        public final String basePath;
-        public final List<MethodDescription> calls;
-
-        public ResourceDescription(String basePath) {
-            this.basePath = basePath;
-            this.calls = new ArrayList<>();
-        }
-        
-        public void addMethod(String verb, String path, String produces, String consumes) {
-        	calls.add(new MethodDescription(verb, path, produces, consumes));
-        }
-    }
-
-    public QuarkusErrorHandler(boolean showStack) {
+    public QuarkusErrorHandler(boolean showStack, List<String> servletMappings, List<String> staticResources, List<String> additionalEndpoints, List<ResourceDescription> descriptions) {
         this.showStack = showStack;
+        this.servletMappings = servletMappings;
+        this.staticResources = staticResources;
+        this.additionalEndpoints = additionalEndpoints;
+        this.descriptions = descriptions;
     }
 
     @Override
@@ -123,7 +94,7 @@ public class QuarkusErrorHandler implements Handler<RoutingContext> {
         }
     }
 
-    private static void handleNotFound(RoutingContext event) {
+    private void handleNotFound(RoutingContext event) {
     	String accept = event.request().getHeader(HttpHeaderNames.ACCEPT);
         if (accept != null && accept.contains(HttpHeaderValues.APPLICATION_JSON)) {
             event.response().headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json; charset=utf-8");
@@ -210,20 +181,4 @@ public class QuarkusErrorHandler implements Handler<RoutingContext> {
                 .replace("<", "&lt;")
                 .replace(">", "&gt;");
     }
-    
-    public static void servlets(Map<String, List<String>> servletToMapping) {
-    	QuarkusErrorHandler.servletMappings = servletToMapping.values().stream()
-                .flatMap(List::stream)
-                .sorted()
-                .collect(Collectors.toList());
-    }
-
-    public static void staticResources(Set<String> knownFiles) {
-    	QuarkusErrorHandler.staticResources = knownFiles.stream().sorted().collect(Collectors.toList());
-    }
-    
-    public static void setAdditionalEndpoints(List<String> additionalEndpoints) {
-    	QuarkusErrorHandler.additionalEndpoints = additionalEndpoints;
-    }
-
 }

@@ -1,6 +1,7 @@
 package io.quarkus.vertx.http.deployment;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -17,7 +18,9 @@ import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
+import io.quarkus.deployment.builditem.DisplayableEndpointBuildItem;
 import io.quarkus.deployment.builditem.LaunchModeBuildItem;
+import io.quarkus.deployment.builditem.MethodDescription;
 import io.quarkus.deployment.builditem.ServiceStartBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
@@ -35,6 +38,7 @@ import io.quarkus.vertx.http.runtime.RouterProducer;
 import io.quarkus.vertx.http.runtime.VertxHttpRecorder;
 import io.quarkus.vertx.http.runtime.cors.CORSRecorder;
 import io.quarkus.vertx.http.runtime.error.ErrorRecorder;
+import io.quarkus.vertx.http.runtime.error.ResourceDescription;
 import io.quarkus.vertx.http.runtime.filters.Filter;
 import io.vertx.core.Handler;
 import io.vertx.core.impl.VertxImpl;
@@ -56,8 +60,27 @@ class VertxHttpProcessor {
     
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
-    FailureBuildItem errors(ErrorRecorder recorder, HttpConfiguration configuration, LaunchModeBuildItem launchMode) {
-        return new FailureBuildItem(recorder.errorHandler(configuration, launchMode.getLaunchMode()));
+    FailureBuildItem errors(ErrorRecorder recorder, HttpConfiguration configuration, LaunchModeBuildItem launchMode, List<DisplayableEndpointBuildItem> endpoints) {
+    	List<String> servletMappings = new ArrayList<>();
+    	List<String> staticResources = new ArrayList<>();
+    	List<String> additionalEndpoints = new ArrayList<>();
+    	List<ResourceDescription> descriptions = new ArrayList<>();
+    	for (DisplayableEndpointBuildItem endpoint : endpoints) {
+			if(endpoint.isServletMappings()) {
+				servletMappings.add(endpoint.toString());
+			} else if(endpoint.isStaticResource()) {
+				staticResources.add(endpoint.toString());
+			} else if(endpoint.isAdditionalEndpoint()) {
+				additionalEndpoints.add(endpoint.toString());
+			} else if(endpoint.isRestResource()) {
+				ResourceDescription description = new ResourceDescription(endpoint.toString());
+				for (MethodDescription m : endpoint.getMethodes()) {
+					description.addMethod(m.verb, m.path, m.produces, m.consumes);
+				}
+				descriptions.add(description);
+			}
+		}
+    	return new FailureBuildItem(recorder.errorHandler(configuration, launchMode.getLaunchMode(), servletMappings, staticResources, additionalEndpoints, descriptions));
     }
 
     @BuildStep
