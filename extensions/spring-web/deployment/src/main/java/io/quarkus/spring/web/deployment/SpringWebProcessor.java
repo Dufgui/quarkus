@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -40,16 +41,16 @@ import io.quarkus.deployment.IsDevelopment;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.Record;
+import io.quarkus.deployment.builditem.DisplayableEndpointBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
+import io.quarkus.deployment.builditem.NonJaxRsClassMappings;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveHierarchyIgnoreWarningBuildItem;
 import io.quarkus.deployment.util.ServiceUtil;
 import io.quarkus.gizmo.ClassOutput;
 import io.quarkus.resteasy.common.deployment.ResteasyCommonProcessor;
 import io.quarkus.resteasy.common.spi.ResteasyJaxrsProviderBuildItem;
-import io.quarkus.resteasy.runtime.ExceptionMapperRecorder;
-import io.quarkus.resteasy.runtime.NonJaxRsClassMappings;
 import io.quarkus.resteasy.server.common.deployment.ResteasyDeploymentCustomizerBuildItem;
 import io.quarkus.resteasy.server.common.spi.AdditionalJaxRsResourceDefiningAnnotationBuildItem;
 import io.quarkus.resteasy.server.common.spi.AdditionalJaxRsResourceMethodAnnotationsBuildItem;
@@ -181,7 +182,7 @@ public class SpringWebProcessor {
     @BuildStep(onlyIf = IsDevelopment.class)
     @Record(STATIC_INIT)
     public void registerWithDevModeNotFoundMapper(BeanArchiveIndexBuildItem beanArchiveIndexBuildItem,
-            ExceptionMapperRecorder recorder) {
+    		BuildProducer<DisplayableEndpointBuildItem> endPointProducer) {
         IndexView index = beanArchiveIndexBuildItem.getIndex();
         Collection<AnnotationInstance> restControllerAnnotations = index.getAnnotations(REST_CONTROLLER_ANNOTATION);
         if (restControllerAnnotations.isEmpty()) {
@@ -235,7 +236,9 @@ public class SpringWebProcessor {
         }
 
         if (!nonJaxRsPaths.isEmpty()) {
-            recorder.nonJaxRsClassNameToMethodPaths(nonJaxRsPaths);
+        	for (Entry<String, NonJaxRsClassMappings> nonJaxRsClassMappings : nonJaxRsPaths.entrySet()) {
+        		endPointProducer.produce(new DisplayableEndpointBuildItem(nonJaxRsClassMappings.getKey(), nonJaxRsClassMappings.getValue()));
+			}
         }
     }
 

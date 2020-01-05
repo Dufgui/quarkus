@@ -60,27 +60,27 @@ class VertxHttpProcessor {
     
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
-    FailureBuildItem errors(ErrorRecorder recorder, HttpConfiguration configuration, LaunchModeBuildItem launchMode, List<DisplayableEndpointBuildItem> endpoints) {
+    FailureBuildItem errors(ErrorRecorder recorder, HttpConfiguration configuration, LaunchModeBuildItem launchMode, List<DisplayableEndpointBuildItem> endpoints, HttpRootPathBuildItem httpRoot) {
     	List<String> servletMappings = new ArrayList<>();
     	List<String> staticResources = new ArrayList<>();
     	List<String> additionalEndpoints = new ArrayList<>();
     	List<ResourceDescription> descriptions = new ArrayList<>();
     	for (DisplayableEndpointBuildItem endpoint : endpoints) {
 			if(endpoint.isServletMappings()) {
-				servletMappings.add(endpoint.toString());
+				servletMappings.add(endpoint.getEndpoint());
 			} else if(endpoint.isStaticResource()) {
-				staticResources.add(endpoint.toString());
+				staticResources.add(endpoint.getEndpoint());
 			} else if(endpoint.isAdditionalEndpoint()) {
-				additionalEndpoints.add(endpoint.toString());
+				additionalEndpoints.add(endpoint.getEndpoint());
 			} else if(endpoint.isRestResource()) {
-				ResourceDescription description = new ResourceDescription(endpoint.toString());
+				ResourceDescription description = new ResourceDescription(endpoint.getEndpoint());
 				for (MethodDescription m : endpoint.getMethodes()) {
 					description.addMethod(m.verb, m.path, m.produces, m.consumes);
 				}
 				descriptions.add(description);
 			}
 		}
-    	return new FailureBuildItem(recorder.errorHandler(configuration, launchMode.getLaunchMode(), servletMappings, staticResources, additionalEndpoints, descriptions));
+    	return new FailureBuildItem(recorder.errorHandler(configuration, launchMode.getLaunchMode(), servletMappings, staticResources, additionalEndpoints, descriptions, httpRoot.getRootPath()));
     }
 
     @BuildStep

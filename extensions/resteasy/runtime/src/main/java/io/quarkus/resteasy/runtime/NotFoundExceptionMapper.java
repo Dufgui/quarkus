@@ -114,7 +114,7 @@ public class NotFoundExceptionMapper implements ExceptionMapper<NotFoundExceptio
                     Class<?> resourceClass = method.getResourceClass();
                     String resourceClassName = resourceClass.getName();
                     String basePath = null;
-                    NonJaxRsClassMappings nonJaxRsClassMappings = null;
+                    nonJaxRsClassMappings nonJaxRsClassMappings = null;
                     Path path = resourceClass.getAnnotation(Path.class);
                     if (path == null) {
                         nonJaxRsClassMappings = nonJaxRsClassNameToMethodPaths.get(resourceClassName);

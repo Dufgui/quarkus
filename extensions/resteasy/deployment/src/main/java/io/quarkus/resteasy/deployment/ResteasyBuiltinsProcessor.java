@@ -18,17 +18,14 @@ import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.CapabilityBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
+import io.quarkus.deployment.builditem.DisplayableEndpointBuildItem;
 import io.quarkus.resteasy.common.spi.ResteasyJaxrsProviderBuildItem;
-import io.quarkus.resteasy.runtime.ExceptionMapperRecorder;
 import io.quarkus.resteasy.runtime.ForbiddenExceptionMapper;
 import io.quarkus.resteasy.runtime.JaxRsSecurityConfig;
-import io.quarkus.resteasy.runtime.NotFoundExceptionMapper;
 import io.quarkus.resteasy.runtime.UnauthorizedExceptionMapper;
 import io.quarkus.resteasy.server.common.deployment.ResteasyDeploymentBuildItem;
 import io.quarkus.security.spi.AdditionalSecuredClassesBuildIem;
 import io.quarkus.undertow.deployment.StaticResourceFilesBuildItem;
-import io.quarkus.vertx.http.deployment.HttpRootPathBuildItem;
-import io.quarkus.vertx.http.deployment.devmode.NotFoundPageDisplayableEndpointBuildItem;
 
 public class ResteasyBuiltinsProcessor {
 
@@ -68,38 +65,19 @@ public class ResteasyBuiltinsProcessor {
 
     @Record(STATIC_INIT)
     @BuildStep(onlyIf = IsDevelopment.class)
-    void setupExceptionMapper(BuildProducer<ResteasyJaxrsProviderBuildItem> providers, HttpRootPathBuildItem httpRoot,
-            ExceptionMapperRecorder recorder) {
-        providers.produce(new ResteasyJaxrsProviderBuildItem(NotFoundExceptionMapper.class.getName()));
-        recorder.setHttpRoot(httpRoot.getRootPath());
-    }
-
-    @Record(STATIC_INIT)
-    @BuildStep(onlyIf = IsDevelopment.class)
-    void addStaticResourcesExceptionMapper(StaticResourceFilesBuildItem paths, ExceptionMapperRecorder recorder) {
+    void addStaticResourcesExceptionMapper(StaticResourceFilesBuildItem paths, BuildProducer<DisplayableEndpointBuildItem> endPointProducer) {
         //limit to 1000 to not have to many files to display
         Set<String> staticResources = paths.files.stream().filter(this::isHtmlFileName).limit(1000).collect(Collectors.toSet());
         if (staticResources.isEmpty()) {
             staticResources = paths.files.stream().limit(1000).collect(Collectors.toSet());
         }
-        recorder.setStaticResource(staticResources);
+        for (String staticResource : staticResources) {
+        	endPointProducer.produce(new DisplayableEndpointBuildItem(staticResource, DisplayableEndpointBuildItem.STATIC_RESOURCE));
+		}
     }
 
     private boolean isHtmlFileName(String fileName) {
         return fileName.endsWith(".html") || fileName.endsWith(".htm");
     }
 
-    @Record(STATIC_INIT)
-    @BuildStep(onlyIf = IsDevelopment.class)
-    void addAdditionalEndpointsExceptionMapper(List<NotFoundPageDisplayableEndpointBuildItem> displayableEndpoints,
-            ExceptionMapperRecorder recorder, HttpRootPathBuildItem httpRoot) {
-        List<String> endpoints = displayableEndpoints
-                .stream()
-                .map(displayableAdditionalBuildItem -> displayableAdditionalBuildItem.getEndpoint()
-                        .substring(1))
-                .sorted()
-                .collect(Collectors.toList());
-
-        recorder.setAdditionalEndpoints(endpoints);
-    }
 }

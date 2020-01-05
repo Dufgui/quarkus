@@ -1,4 +1,4 @@
-package io.quarkus.resteasy.runtime;
+package io.quarkus.deployment.builditem;
 
 import java.util.Map;
 

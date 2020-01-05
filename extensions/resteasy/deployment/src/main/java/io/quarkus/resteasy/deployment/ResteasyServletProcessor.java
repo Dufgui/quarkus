@@ -1,11 +1,8 @@
 package io.quarkus.resteasy.deployment;
 
-import static io.quarkus.deployment.annotations.ExecutionTime.STATIC_INIT;
-
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import javax.servlet.DispatcherType;
 import javax.ws.rs.core.Application;
@@ -20,11 +17,10 @@ import io.quarkus.deployment.Capabilities;
 import io.quarkus.deployment.IsDevelopment;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
-import io.quarkus.deployment.annotations.Record;
+import io.quarkus.deployment.builditem.DisplayableEndpointBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.resteasy.common.deployment.ResteasyInjectionReadyBuildItem;
-import io.quarkus.resteasy.runtime.ExceptionMapperRecorder;
 import io.quarkus.resteasy.runtime.ResteasyFilter;
 import io.quarkus.resteasy.server.common.deployment.ResteasyServerConfigBuildItem;
 import io.quarkus.undertow.deployment.FilterBuildItem;
@@ -93,10 +89,15 @@ public class ResteasyServletProcessor {
     }
 
     @BuildStep(onlyIf = IsDevelopment.class)
-    @Record(STATIC_INIT)
-    void addServletsToExceptionMapper(List<ServletBuildItem> servlets, ExceptionMapperRecorder recorder) {
-        recorder.setServlets(servlets.stream().filter(s -> !JAX_RS_SERVLET_NAME.equals(s.getName()))
-                .collect(Collectors.toMap(s -> s.getName(), s -> s.getMappings())));
+    void addServletsToExceptionMapper(List<ServletBuildItem> servlets, BuildProducer<DisplayableEndpointBuildItem> endPointProducer) {
+    	for (ServletBuildItem servlet : servlets) {
+			if(!JAX_RS_SERVLET_NAME.equals(servlet.getName())) {
+				for (String mapping : servlet.getMappings()) {
+					endPointProducer.produce(new DisplayableEndpointBuildItem(mapping, DisplayableEndpointBuildItem.SERVLET_MAPPING));
+				}
+			}
+		}
+    	
     }
 
     private String getMappingPath(String path) {

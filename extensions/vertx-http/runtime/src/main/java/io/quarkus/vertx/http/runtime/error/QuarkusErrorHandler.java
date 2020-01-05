@@ -14,7 +14,6 @@ import org.jboss.logging.Logger;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.quarkus.deployment.builditem.MethodDescription;
 import io.quarkus.runtime.TemplateHtmlBuilder;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
@@ -33,13 +32,15 @@ public class QuarkusErrorHandler implements Handler<RoutingContext> {
 
     private final boolean showStack;
     
+    private final String httpRoot;
     private final List<String> servletMappings;
     private final List<String> staticResources;
     private final List<String> additionalEndpoints;
     private final List<ResourceDescription> descriptions;
     
-    public QuarkusErrorHandler(boolean showStack, List<String> servletMappings, List<String> staticResources, List<String> additionalEndpoints, List<ResourceDescription> descriptions) {
+    public QuarkusErrorHandler(boolean showStack, String httpRoot, List<String> servletMappings, List<String> staticResources, List<String> additionalEndpoints, List<ResourceDescription> descriptions) {
         this.showStack = showStack;
+        this.httpRoot = httpRoot;
         this.servletMappings = servletMappings;
         this.staticResources = staticResources;
         this.additionalEndpoints = additionalEndpoints;
@@ -105,7 +106,7 @@ public class QuarkusErrorHandler implements Handler<RoutingContext> {
             TemplateHtmlBuilder sb = new TemplateHtmlBuilder("404 - Resource Not Found", "", "Resources overview");
             sb.resourcesStart("REST resources");
             for (ResourceDescription resource : descriptions) {
-                sb.resourcePath(resource.basePath);
+                sb.resourcePath(adjustRoot(resource.basePath));
                 for (MethodDescription method : resource.calls) {
                     sb.method(method.verb, method.path);
                     if (method.consumes != null) {
@@ -126,7 +127,7 @@ public class QuarkusErrorHandler implements Handler<RoutingContext> {
             if (!servletMappings.isEmpty()) {
                 sb.resourcesStart("Servlet mappings");
                 for (String servletMapping : servletMappings) {
-                    sb.servletMapping(servletMapping);
+                    sb.servletMapping(adjustRoot(servletMapping));
                 }
                 sb.resourcesEnd();
             }
@@ -134,7 +135,7 @@ public class QuarkusErrorHandler implements Handler<RoutingContext> {
             if (!staticResources.isEmpty()) {
                 sb.resourcesStart("Static resources");
                 for (String staticResource : staticResources) {
-                    sb.staticResourcePath(staticResource);
+                    sb.staticResourcePath(adjustRoot(staticResource));
                 }
                 sb.resourcesEnd();
             }
@@ -142,7 +143,7 @@ public class QuarkusErrorHandler implements Handler<RoutingContext> {
             if (!additionalEndpoints.isEmpty()) {
                 sb.resourcesStart("Additional endpoints");
                 for (String additionalEndpoint : additionalEndpoints) {
-                    sb.staticResourcePath(additionalEndpoint);
+                    sb.staticResourcePath(adjustRoot(additionalEndpoint));
                 }
                 sb.resourcesEnd();
             }
@@ -180,5 +181,27 @@ public class QuarkusErrorHandler implements Handler<RoutingContext> {
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;");
+    }
+    
+    private String adjustRoot(String basePath) {
+        //httpRoot can optionally end with a slash
+        //also some templates want the returned path to start with a / and some don't
+        //to make this work we check if the basePath starts with a / or not, and make sure we
+        //the return value follows the same pattern
+
+        if (httpRoot.equals("/")) {
+            //leave it alone
+            return basePath;
+        }
+        if (basePath.startsWith("/")) {
+            if (!httpRoot.endsWith("/")) {
+                return httpRoot + basePath;
+            }
+            return httpRoot.substring(0, httpRoot.length() - 1) + basePath;
+        }
+        if (httpRoot.endsWith("/")) {
+            return httpRoot.substring(1) + basePath;
+        }
+        return httpRoot.substring(1) + "/" + basePath;
     }
 }
